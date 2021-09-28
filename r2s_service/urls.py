@@ -15,8 +15,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from linebot_service import views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("health/", include("health_check.urls")),
+    path("callback", views.callback),
 ]

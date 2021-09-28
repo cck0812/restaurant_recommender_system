@@ -38,7 +38,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "health_check",
-    "linebot",
+    "linebot_service",
 ]
 
 MIDDLEWARE = [
@@ -129,3 +129,8 @@ STATIC_URL = "/static/"
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Line API access token & secret
+LINE_CHANNEL_ACCESS_TOKEN = 'f+Qf5rDHeWdPoQ2mgNfQFGeYeZRA9uNEjVQMZu/k9Om9qBAV3f/2HDE2SxYRzf4sORe5rAKUDMPqE5X+Q9hIJkXAImq6gKpV5qCu/eZ5INT1MJ9ZWIpbnlq8X6PLmD6iVWO/7bRaWMC86jF9mAwoZwdB04t89/1O/w1cDnyilFU='
+
+LINE_CHANNEL_SECRET = '70c7ca8c56f8de2b86edf5280d1a7409'

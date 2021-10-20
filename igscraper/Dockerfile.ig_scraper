@@ -1,0 +1,13 @@
+# syntax=docker/dockerfile:1
+FROM python:3.8
+ENV PYTHONUNBUFFERED=1
+WORKDIR /code
+RUN git clone --single-branch --branch add_media_content https://github.com/cck0812/instagram-scraper.git && \
+    pip install --upgrade pip setuptools wheel && \
+    cd * && \
+    pip install -r requirements.txt && \
+    python setup.py bdist_wheel && \
+    pip install dist/* && \
+    cd ../
+COPY . /code/
+RUN pip install -r requirements.txt

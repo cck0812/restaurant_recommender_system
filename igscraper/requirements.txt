@@ -1,0 +1,5 @@
+portalocker==2.3.2
+psycopg2==2.9.1
+marshmallow==3.13.0
+marshmallow-sqlalchemy==0.26.1
+SQLAlchemy==1.4.25

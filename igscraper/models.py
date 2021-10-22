@@ -39,11 +39,11 @@ class Location(Base):
     address_json = sa.Column(JSON)
 
 
-class Comment(Base):
-    __tablename__ = "comment"
-    identifier = sa.Column(sa.String, primary_key=True)
-    owner = sa.Column(sa.String)
-    text = sa.Column(sa.String)
+# class Comment(Base):
+#     __tablename__ = "comment"
+#     identifier = sa.Column(sa.String, primary_key=True)
+#     owner = sa.Column(sa.String)
+#     text = sa.Column(sa.String)
 
 
 Base.metadata.create_all(engine)
@@ -66,9 +66,9 @@ class LocationSchema(SQLAlchemyAutoSchema):
         unknown = EXCLUDE
 
 
-class CommentSchema(SQLAlchemyAutoSchema):
-    class Meta:
-        model = Comment
-        include_relationships = True
-        load_instance = True
-        unknown = EXCLUDE
+# class CommentSchema(SQLAlchemyAutoSchema):
+#     class Meta:
+#         model = Comment
+#         include_relationships = True
+#         load_instance = True
+#         unknown = EXCLUDE

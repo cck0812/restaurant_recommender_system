@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 # -*-coding:utf-8 -*-
+"""
+Instagram content parser by each step
+
+* Scraping top hot medias in tags, including like counts, image url, etc
+* Scraping comments and location id of each top hot media
+* Scraping location information of each media, e.g., latitude, longitude, address
+"""
 
 import abc
 import json
@@ -11,6 +18,7 @@ from pathlib import Path
 
 from igramscraper.instagram import Instagram
 from sqlalchemy import desc, select
+from sqlalchemy.inspection import inspect
 
 from models import LocationSchema, Media, MediaSchema
 from utils import connector, constants
@@ -27,12 +35,14 @@ class Extractor(Instagram, metaclass=abc.ABCMeta):
         return NotImplemented
 
     @abc.abstractclassmethod
-    def save_to_db(self, data, schema, **kwargs):
+    def save_to_db(self, data, schema, ref_table=None, ref_col=None, **kwargs):
         """
         Connect to database and save medias information
 
         :param Union[object, list] data: Data that needs to update into database
         :param object schema: A marshmallow schema
+        :param object ref_table: SQLAlchemy table class
+        :param string ref_col: A column name that needs to be checked
         :param **kwargs: Additional content that needs to update into database
         """
         data = self.drop_none_attr(data)
@@ -40,7 +50,8 @@ class Extractor(Instagram, metaclass=abc.ABCMeta):
         with connector.ConnectFromPool() as session:
             load_data = schema.load(data, session=session)
 
-            if kwargs != {}:
+            # Update additional content with same table
+            if kwargs != {} and ref_table is None:
                 for attr, v in kwargs.items():
                     self.update_media_attr(load_data, attr, v)
 
@@ -50,9 +61,36 @@ class Extractor(Instagram, metaclass=abc.ABCMeta):
             else:
                 session.merge(load_data)
 
+            # Update additional content with different table
+            if (ref_table is not None) and (ref_col is not None):
+                self._update_ref_table(session, load_data, ref_table, ref_col, **kwargs)
+
+    @staticmethod
+    def _update_ref_table(session, load_data, ref_table, ref_col, **kwargs):
+        """Update *checked_time column in reference table"""
+
+        assert not isinstance(
+            load_data, list
+        ), "Reference data must be an object not list"
+        assert kwargs != {}, "No additional content to be added"
+
+        # Get name of primary key
+        table_class = session.identity_key(instance=load_data)[0]
+        pk_name = inspect(table_class).primary_key[0].name
+
+        results = (
+            session.query(ref_table)
+            .filter(getattr(ref_table, ref_col) == getattr(load_data, pk_name))
+            .with_for_update()
+            .all()
+        )
+
+        for attr, v in kwargs.items():
+            Extractor.update_media_attr(results, attr, v)
+
     @staticmethod
     def update_media_attr(obj, attr_name, value):
-        """Update media attributes"""
+        """According to obj type, object of list or single object to update media attributes"""
 
         if isinstance(obj, list):
             for obj_ in obj:
@@ -225,16 +263,32 @@ class LocationExtractor(Extractor):
         return "location"
 
     def get_source_list(self):
-        return super().get_source_list(self.check_time_column, self.check_column)
+        src_list = super().get_source_list(self.check_time_column, self.check_column)
+
+        # Deduplicates location_id
+        return list(dict.fromkeys(src_list))
 
     def parse_data(self, loc_id):
         return self.get_location_by_id(loc_id)
 
+    @staticmethod
+    def get_address_jsonfmt(data):
+        address = data.get("address_json", None)
+
+        if address is not None:
+            address_dict = json.loads(address)
+            data.update({"address_json": address_dict})
+
+        return data
+
     def save_to_db(self, data):
+        data = self.get_address_jsonfmt(data)
         dt = int(datetime.now().timestamp())
         content = {self.check_time_column: dt}
 
-        super().save_to_db(data, self.schema, **content)
+        super().save_to_db(
+            data, self.schema, ref_table=Media, ref_col=self.check_column, **content
+        )
 
 
 class CommentsExtractor(Extractor):

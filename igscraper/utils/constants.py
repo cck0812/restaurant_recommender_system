@@ -7,7 +7,7 @@ DB_PARAM = {
     "max_overflow": 0,
 }
 
-SEARCH_TAGS = ["台北美食"]
+SEARCH_TAGS = ["苗栗美食"]
 IMG_FOOD_RANGE = ["food", "drink", "dessert"]
 
 MIN_NEXT_REQUEST_INTERVAL = 30

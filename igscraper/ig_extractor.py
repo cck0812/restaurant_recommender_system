@@ -11,10 +11,8 @@ Instagram content parser by each step
 import abc
 import json
 import logging
-import os
 from datetime import datetime
 from itertools import chain
-from pathlib import Path
 
 from igramscraper.instagram import Instagram
 from sqlalchemy import desc, select
@@ -45,7 +43,7 @@ class Extractor(Instagram, metaclass=abc.ABCMeta):
         :param string ref_col: A column name that needs to be checked
         :param **kwargs: Additional content that needs to update into database
         """
-        data = self.drop_none_attr(data)
+        data = self.drop_empty_attr(data)
 
         with connector.ConnectFromPool() as session:
             load_data = schema.load(data, session=session)
@@ -102,18 +100,22 @@ class Extractor(Instagram, metaclass=abc.ABCMeta):
         return obj
 
     @staticmethod
-    def drop_none_attr(obj):
-        """Filter out None attributes, avoid to overwrite existed records in database"""
+    def drop_empty_attr(obj):
+        """Filter out empty attributes, avoid to overwrite existed records in database"""
+
+        exclude_attr_value = [0, None, []]
 
         if isinstance(obj, list):
             obj_list = []
             for obj_ in obj:
-                obj_list.append({k: v for k, v in obj_.items() if v is not None})
+                obj_list.append(
+                    {k: v for k, v in obj_.items() if v not in exclude_attr_value}
+                )
 
             return obj_list
 
         elif isinstance(obj, dict):
-            obj = {k: v for k, v in obj.items() if v is not None}
+            obj = {k: v for k, v in obj.items() if v not in exclude_attr_value}
 
             return obj
 

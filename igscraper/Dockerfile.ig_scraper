@@ -11,3 +11,5 @@ RUN git clone --single-branch --branch add_media_content https://github.com/cck0
     cd ../
 COPY . /code/
 RUN pip install -r requirements.txt
+ENTRYPOINT ["python", "executor.py"]
+CMD ["-h"]

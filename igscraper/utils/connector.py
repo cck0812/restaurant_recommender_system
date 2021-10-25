@@ -13,7 +13,7 @@ class ConnectFromPool(metaclass=Singleton):
     """Get connection from pool"""
 
     def __init__(self):
-        self.engine = sa.create_engine(**constants.DB_PARAM)
+        self.engine = sa.create_engine(**constants.get_db_param_dict())
         self.session = None
         logger.debug("Connected to database")
 

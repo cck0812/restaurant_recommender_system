@@ -35,6 +35,24 @@ def execute(extractor):
         scrap_ig_content(src_list, extractor)
 
 
+def handler(event, handler):
+    content = event.get("content", None)
+
+    if content == "top_medias":
+        extractor = TopMediasExtractor()
+
+    elif content == "media_check":
+        extractor = MediaExtractor()
+
+    elif content == "location_check":
+        extractor = LocationExtractor()
+
+    else:
+        return "Valid option: top_medias | media_check | location_check"
+
+    execute(extractor)
+
+
 def main():
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument(

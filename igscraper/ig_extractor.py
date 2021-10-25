@@ -196,7 +196,7 @@ class TopMediasExtractor(Extractor):
         return food_medias
 
     def get_source_list(self):
-        return constants.SEARCH_TAGS
+        return constants.get_search_tags()
 
     def save_to_db(self, data):
         content = {"tag": self.tag}

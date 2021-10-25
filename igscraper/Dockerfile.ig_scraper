@@ -1,15 +1,61 @@
 # syntax=docker/dockerfile:1
-FROM python:3.8
-ENV PYTHONUNBUFFERED=1
-WORKDIR /code
-RUN git clone --single-branch --branch add_media_content https://github.com/cck0812/instagram-scraper.git && \
+ARG REPO_NAME="instagram-scraper"
+ARG REPO_BRANCH_NAME="add_media_content"
+ARG FUNCTION_DIR="/code/"
+ARG RUNTIME_VERSION="3.8"
+ARG DISTRO_VERSION="3.12"
+
+# Stage - bundle base image + runtime
+FROM python:${RUNTIME_VERSION}-alpine${DISTRO_VERSION} AS python-alpine
+# Install GCC (Alpine uses musl but we compile and link dependencies with GCC)
+RUN apk add --no-cache \
+    libstdc++ \
+    libxslt \
+    postgresql-libs \
+    libc-dev
+
+# Stage - build dependencies
+FROM python-alpine AS build-image
+# Install aws-lambda-cpp build dependencies
+RUN apk add --no-cache \
+    build-base \
+    libtool \
+    autoconf \
+    automake \
+    libexecinfo-dev \
+    make \
+    cmake \
+    libcurl \
+    git \
+    libxml2-dev \
+    libxslt-dev \
+    postgresql-dev
+ARG REPO_NAME
+ARG REPO_BRANCH_NAME
+ARG FUNCTION_DIR
+WORKDIR ${FUNCTION_DIR}
+RUN git clone --single-branch --branch ${REPO_BRANCH_NAME} https://github.com/cck0812/${REPO_NAME}.git && \
     pip install --upgrade pip setuptools wheel && \
-    cd * && \
-    pip install -r requirements.txt && \
-    python setup.py bdist_wheel && \
-    pip install dist/* && \
-    cd ../
-COPY . /code/
-RUN pip install -r requirements.txt
-ENTRYPOINT ["python", "executor.py"]
-CMD ["-h"]
+    cd ${REPO_NAME} && \
+    python setup.py -q bdist_wheel && \
+    pip wheel -r ./requirements.txt -w dist/
+COPY requirements.txt ${FUNCTION_DIR}
+RUN pip wheel -r ${FUNCTION_DIR}requirements.txt -w ${FUNCTION_DIR}${REPO_NAME}/dist/
+
+# Stage - build runtime image
+FROM python-alpine
+ENV PYTHONUNBUFFERED=1
+ARG FUNCTION_DIR
+ARG REPO_NAME
+WORKDIR ${FUNCTION_DIR}
+# Install .whl which from build-image
+RUN mkdir dist
+COPY --from=build-image ${FUNCTION_DIR}${REPO_NAME}/dist/* ${FUNCTION_DIR}dist/
+RUN pip install --no-index --find-links dist/* dist/*
+COPY . ${FUNCTION_DIR}
+# Add Lambda Runtime Interface Emulator and use a script in the ENTRYPOINT for simpler local runs
+ADD https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest/download/aws-lambda-rie /usr/bin/aws-lambda-rie
+COPY entry.sh /
+RUN chmod 755 /usr/bin/aws-lambda-rie /entry.sh
+ENTRYPOINT [ "/entry.sh" ]
+CMD [ "executor.handler" ]
